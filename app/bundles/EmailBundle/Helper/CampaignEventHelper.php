@@ -48,10 +48,16 @@ class CampaignEventHelper
     public static function sendEmailAction(MauticFactory $factory, $lead, $event)
     {
         $emailSent = false;
-
-        if ($lead instanceof Lead) {
+        $emailFields = array();
+        if ($lead instanceof Lead) 
+        {
+            // Modified by V-Teams
             $fields = $lead->getFields();
-
+            foreach($lead->getFields(1) as $field)    
+            {
+                if($field['type'] == 'email' && trim($field['value']) != "")
+                   $emailFields[] = $field['alias'];
+            }
             /** @var \Mautic\LeadBundle\Model\LeadModel $leadModel */
             $leadModel             = $factory->getModel('lead');
             $leadCredentials       = $leadModel->flattenFields($fields);
@@ -59,23 +65,28 @@ class CampaignEventHelper
         } else {
             $leadCredentials = $lead;
         }
-
-        if (!empty($leadCredentials['email'])) {
-            /** @var \Mautic\EmailBundle\Model\EmailModel $emailModel */
-            $emailModel = $factory->getModel('email');
-
-            $emailId = (int) $event['properties']['email'];
-
-            $email = $emailModel->getEntity($emailId);
-
-            if ($email != null && $email->isPublished()) {
-                $options   = array('source' => array('campaign', $event['campaign']['id']));
-                $emailSent = $emailModel->sendEmail($email, $leadCredentials, $options);
+        
+        // Modified by V-Teams
+        if(!empty($emailFields))
+        {
+            foreach((array) $emailFields as $field)
+            {
+                if (!empty($leadCredentials[$field])) 
+                {
+                   $leadCredentials['email'] = $leadCredentials[$field];
+                    /** @var \Mautic\EmailBundle\Model\EmailModel $emailModel */
+                    $emailModel = $factory->getModel('email');
+                    $emailId = (int) $event['properties']['email'];
+                    $email = $emailModel->getEntity($emailId);
+                    if ($email != null && $email->isPublished())
+                    {
+                        $options   = array('source' => array('campaign', $event['campaign']['id']));
+                        $emailSent = $emailModel->sendEmail($email, $leadCredentials, $options);
+                    }
+                }
             }
+            unset($lead, $leadCredentials, $email, $emailModel, $factory);
         }
-
-        unset($lead, $leadCredentials, $email, $emailModel, $factory);
-
         return $emailSent;
     }
 }
