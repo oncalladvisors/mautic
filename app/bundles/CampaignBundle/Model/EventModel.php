@@ -577,9 +577,9 @@ class EventModel extends CommonFormModel
                             $decisionLogged = false;
                             foreach ($decisionEvent['children'] as $childEvent) {
                                 // Modified by V-Teams (Zeeshan Ahmad)
-                                foreach($lead->getFields(1) as $field)    {
-                                    if($field['type'] == 'email' && trim($field['value']) != "")
-                                    {
+//                                foreach($lead->getFields(1) as $field)    {
+//                                    if($field['type'] == 'email' && trim($field['value']) != "")
+//                                    {
                                         if ($this->executeEvent(
                                                 $childEvent,
                                                 $campaign,
@@ -590,32 +590,37 @@ class EventModel extends CommonFormModel
                                                 null,
                                                 $evaluatedEventCount,
                                                 $executedEventCount,
-                                                $totalEventCount,
-                                                $field['value']
+                                                $totalEventCount
+                                                //$field['value']
                                             )
                                             && !$decisionLogged
                                         ) {
-                                            // Log the decision
-                                            $log = $this->getLogEntity($decisionEvent['id'], $campaign, $lead, null, true, $field['value']);
-                                            $log->setDateTriggered(new \DateTime());
-                                            $log->setNonActionPathTaken(true);
-                                            $repo->saveEntity($log);
-                                            $this->em->detach($log);
-                                            unset($log);
+//                                            foreach($lead->getFields(1) as $field)    {
+//                                                if($field['type'] == 'email')
+//                                                {
+                                                    // Log the decision
+                                                    $log = $this->getLogEntity($decisionEvent['id'], $campaign, $lead, null, true);
+                                                    $log->setDateTriggered(new \DateTime());
+                                                    $log->setNonActionPathTaken(true);
+                                                    $repo->saveEntity($log);
+                                                    $this->em->detach($log);
+                                                    unset($log);
+//                                                }
+//                                            }
                                             $decisionLogged = true;
                                         }
-                                    }
+                                    //}
                                 
-                                }
+                                //}
                             }
                         }
 
                         unset($decisionEvent);
                     } else {
                         // Modified by V-Teams (Zeeshan Ahmad)
-                        foreach($lead->getFields(1) as $field)    {
-                            if($field['type'] == 'email' && trim($field['value']) != "")
-                            {
+//                        foreach($lead->getFields(1) as $field)    {
+//                            if($field['type'] == 'email' && trim($field['value']) != "")
+//                            {
                                 if ($this->executeEvent(
                                     $event,
                                     $campaign,
@@ -627,13 +632,13 @@ class EventModel extends CommonFormModel
                                     false,
                                     $evaluatedEventCount,
                                     $executedEventCount,
-                                    $totalEventCount,
-                                    $field['value']
+                                    $totalEventCount
+                                   // $field['value']
                                 )) {
                                     $rootExecutedCount++;
                                 }
-                            }
-                        }
+                            //}
+                        //}
                     }
 
                     unset($event);
@@ -708,8 +713,8 @@ class EventModel extends CommonFormModel
         $logExists = false,
         &$evaluatedEventCount = 0,
         &$executedEventCount = 0,
-        &$totalEventCount = 0,
-        $email = null
+        &$totalEventCount = 0
+        //$email = null
     ) {
         $evaluatedEventCount++;
         $totalEventCount++;
@@ -781,7 +786,12 @@ class EventModel extends CommonFormModel
             );
         } else {
             $systemTriggered = !defined('MAUTIC_CAMPAIGN_NOT_SYSTEM_TRIGGERED');
-            $log             = $this->getLogEntity($event['id'], $campaign, $lead, null, $systemTriggered, $email);
+            foreach($lead->getFields(1) as $field)    {
+                if($field['type'] == 'email')
+                {
+                    $log             = $this->getLogEntity($event['id'], $campaign, $lead, null, $systemTriggered, $field['value']);
+                }
+            } 
         }
 
         if ($eventTriggerDate instanceof \DateTime) {
@@ -1612,7 +1622,7 @@ class EventModel extends CommonFormModel
      *
      * @return bool|mixed
      */
-    public function invokeEventCallback($event, $settings, $lead = null, $eventDetails = null, $systemTriggered = false, LeadEventLog $log = null, $email = null)
+    public function invokeEventCallback($event, $settings, $lead = null, $eventDetails = null, $systemTriggered = false, LeadEventLog $log = null)
     {
         $args = array(
             'eventSettings'   => $settings,
@@ -1621,8 +1631,7 @@ class EventModel extends CommonFormModel
             'lead'            => $lead,
             'factory'         => $this->factory,
             'systemTriggered' => $systemTriggered,
-            'config'          => $event['properties'],
-            'email'          => $email,
+            'config'          => $event['properties']
         );
 
         if (is_callable($settings['callback'])) {
@@ -1789,7 +1798,7 @@ class EventModel extends CommonFormModel
      * @return LeadEventLog
      * @throws \Doctrine\ORM\ORMException
      */
-    public function getLogEntity($event, $campaign, $lead = null, $ipAddress = null, $systemTriggered = false, $email=null)
+    public function getLogEntity($event, $campaign, $lead = null, $ipAddress = null, $systemTriggered = false)
     {
         $log = new LeadEventLog();
 
@@ -1817,7 +1826,7 @@ class EventModel extends CommonFormModel
         $log->setLead($lead);
         $log->setDateTriggered(new \DateTime());
         $log->setSystemTriggered($systemTriggered);
-        $log->setEmail($email);
+        //$log->setEmail($email);
         // Save some RAM for batch processing
         unset($event, $campaign, $lead);
 
