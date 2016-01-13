@@ -119,10 +119,10 @@ class LeadEventLog
             ->build();
         
          // Modified by V-Teams (Zeeshan Ahmad)
-        $builder->createField('email', 'string')
-            ->columnName('email')
-            ->isPrimaryKey()
-            ->build();
+//        $builder->createField('email', 'string')
+//            ->columnName('email')
+//            ->isPrimaryKey()
+//            ->build();
         
         $builder->createField('metadata', 'array')
             ->nullable()

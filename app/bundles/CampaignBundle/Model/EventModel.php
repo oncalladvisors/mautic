@@ -591,27 +591,21 @@ class EventModel extends CommonFormModel
                                                 $evaluatedEventCount,
                                                 $executedEventCount,
                                                 $totalEventCount
-                                                //$field['value']
                                             )
                                             && !$decisionLogged
                                         ) {
-//                                            foreach($lead->getFields(1) as $field)    {
-//                                                if($field['type'] == 'email')
-//                                                {
-                                                    // Log the decision
-                                                    $log = $this->getLogEntity($decisionEvent['id'], $campaign, $lead, null, true);
-                                                    $log->setDateTriggered(new \DateTime());
-                                                    $log->setNonActionPathTaken(true);
-                                                    $repo->saveEntity($log);
-                                                    $this->em->detach($log);
-                                                    unset($log);
-//                                                }
-//                                            }
+                                            // Log the decision
+                                            $log = $this->getLogEntity($decisionEvent['id'], $campaign, $lead, null, true);
+                                            $log->setDateTriggered(new \DateTime());
+                                            $log->setNonActionPathTaken(true);
+                                            $repo->saveEntity($log);
+                                            $this->em->detach($log);
+                                            unset($log);
                                             $decisionLogged = true;
                                         }
-                                    //}
-                                
-                                //}
+//                                    }
+//                                
+//                                }
                             }
                         }
 
@@ -633,12 +627,11 @@ class EventModel extends CommonFormModel
                                     $evaluatedEventCount,
                                     $executedEventCount,
                                     $totalEventCount
-                                   // $field['value']
                                 )) {
                                     $rootExecutedCount++;
                                 }
-                            //}
-                        //}
+//                            }
+//                        }
                     }
 
                     unset($event);
@@ -714,10 +707,10 @@ class EventModel extends CommonFormModel
         &$evaluatedEventCount = 0,
         &$executedEventCount = 0,
         &$totalEventCount = 0
-        //$email = null
     ) {
         $evaluatedEventCount++;
         $totalEventCount++;
+        $otherActions = true;
 
         // Get event settings if applicable
         if ($eventSettings === null) {
@@ -786,17 +779,12 @@ class EventModel extends CommonFormModel
             );
         } else {
             $systemTriggered = !defined('MAUTIC_CAMPAIGN_NOT_SYSTEM_TRIGGERED');
-            foreach($lead->getFields(1) as $field)    {
-                if($field['type'] == 'email')
-                {
-                    $log             = $this->getLogEntity($event['id'], $campaign, $lead, null, $systemTriggered, $field['value']);
-                }
-            } 
+            $log             = $this->getLogEntity($event['id'], $campaign, $lead, null, $systemTriggered);
         }
 
         if ($eventTriggerDate instanceof \DateTime) {
             $executedEventCount++;
-
+             
             //lead actively triggered this event, a decision wasn't involved, or it was system triggered and a "no" path so schedule the event to be fired at the defined time
             $logger->debug(
                 'CAMPAIGN: '.ucfirst($event['eventType']).' ID# '.$event['id'].' for lead ID# '.$lead->getId()
@@ -807,7 +795,7 @@ class EventModel extends CommonFormModel
             $log->setIsScheduled(true);
             $log->setTriggerDate($eventTriggerDate);
             $repo->saveEntity($log);
-
+           
             if ($this->dispatcher->hasListeners(CampaignEvents::ON_EVENT_SCHEDULED)) {
                 $args = array(
                     'eventSettings'   => $thisEventSettings,
@@ -832,6 +820,7 @@ class EventModel extends CommonFormModel
 
             try {
                 $repo->saveEntity($log);
+
             } catch (EntityNotFoundException $exception) {
                 // The lead has been likely removed from this lead/list
                 $logger->debug(
@@ -848,10 +837,22 @@ class EventModel extends CommonFormModel
 
                 return false;
             }
-
-            //trigger the action
-            $response = $this->invokeEventCallback($event, $thisEventSettings, $lead, null, true, $log, $email);
-
+            
+            foreach($lead->getFields(1) as $field)
+            {
+                if($otherActions) {
+                    $otherActions = false;
+                    //trigger the action
+                    $response = $this->invokeEventCallback($event, $thisEventSettings, $lead, null, true, $log, $field['value'], true);
+                }else {
+                    if($field['type'] == 'email') {
+                        //trigger the action
+                        $response = $this->invokeEventCallback($event, $thisEventSettings, $lead, null, true, $log, $field['value'], false);
+                    }
+                }   
+            }
+            print_r($response);
+            
             if ($response instanceof LeadEventLog) {
                 // Listener handled the event and returned a log entry
                 $repo->saveEntity($response);
@@ -1619,10 +1620,12 @@ class EventModel extends CommonFormModel
      * @param null $eventDetails
      * @param bool $systemTriggered
      * @param LeadEventLog $log
-     *
+     * @param string $email
+     * @param bool $otherActions
+     * 
      * @return bool|mixed
      */
-    public function invokeEventCallback($event, $settings, $lead = null, $eventDetails = null, $systemTriggered = false, LeadEventLog $log = null)
+    public function invokeEventCallback($event, $settings, $lead = null, $eventDetails = null, $systemTriggered = false, LeadEventLog $log = null, $email = null, $otherActions = false)
     {
         $args = array(
             'eventSettings'   => $settings,
@@ -1631,44 +1634,52 @@ class EventModel extends CommonFormModel
             'lead'            => $lead,
             'factory'         => $this->factory,
             'systemTriggered' => $systemTriggered,
-            'config'          => $event['properties']
+            'config'          => $event['properties'],
+            'email'          => $email,
         );
-
         if (is_callable($settings['callback'])) {
             if (is_array($settings['callback'])) {
                 $reflection = new \ReflectionMethod($settings['callback'][0], $settings['callback'][1]);
             } elseif (strpos($settings['callback'], '::') !== false) {
-                $parts      = explode('::', $settings['callback']);
-                $reflection = new \ReflectionMethod($parts[0], $parts[1]);
+                if($otherActions)
+                {
+                   $parts      = explode('::', $settings['callback']);
+                   $reflection = new \ReflectionMethod($parts[0], $parts[1]);
+                }
             } else {
                 $reflection = new \ReflectionMethod(null, $settings['callback']);
             }
 
             $pass = array();
-            foreach ($reflection->getParameters() as $param) {
-                if (isset($args[$param->getName()])) {
-                    $pass[] = $args[$param->getName()];
-                } else {
-                    $pass[] = null;
+            if(isset($reflection))
+            {    
+                foreach ($reflection->getParameters() as $param) {
+                    if (isset($args[$param->getName()])) {
+                        $pass[] = $args[$param->getName()];
+                    } else {
+                        $pass[] = null;
+                    }
+                }
+
+                $result = $reflection->invokeArgs($this, $pass);
+
+                if ('decision' != $event['eventType'] && $this->dispatcher->hasListeners(CampaignEvents::ON_EVENT_EXECUTION)) {
+                    $executionEvent = $this->dispatcher->dispatch(
+                        CampaignEvents::ON_EVENT_EXECUTION,
+                        new CampaignExecutionEvent($args, $result, $log)
+                    );
+
+                    if ($executionEvent->wasLogUpdatedByListener()) {
+                        $result = $executionEvent->getLogEntry();
+                    }
                 }
             }
-            
-            $result = $reflection->invokeArgs($this, $pass);
-
-            if ('decision' != $event['eventType'] && $this->dispatcher->hasListeners(CampaignEvents::ON_EVENT_EXECUTION)) {
-                $executionEvent = $this->dispatcher->dispatch(
-                    CampaignEvents::ON_EVENT_EXECUTION,
-                    new CampaignExecutionEvent($args, $result, $log)
-                );
-
-                if ($executionEvent->wasLogUpdatedByListener()) {
-                    $result = $executionEvent->getLogEntry();
-                }
+            else {
+                $result = true;
             }
         } else {
             $result = true;
         }
-
         // Save some RAM for batch processing
         unset($args, $pass, $reflection, $settings, $lead, $event, $eventDetails);
 
@@ -1801,7 +1812,7 @@ class EventModel extends CommonFormModel
     public function getLogEntity($event, $campaign, $lead = null, $ipAddress = null, $systemTriggered = false)
     {
         $log = new LeadEventLog();
-
+       
         if ($ipAddress == null) {
             // Lead triggered from system IP
             $ipAddress = $this->factory->getIpAddress();
@@ -1811,6 +1822,7 @@ class EventModel extends CommonFormModel
         if (!$event instanceof Event) {
             $event = $this->em->getReference('MauticCampaignBundle:Event', $event);
         }
+        
         $log->setEvent($event);
 
         if (!$campaign instanceof Campaign) {

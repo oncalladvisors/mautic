@@ -71,7 +71,7 @@ class CampaignEventHelper
                 $options   = array('source' => array('campaign', $event['campaign']['id']));
                 $emailSent = $emailModel->sendEmail($email, $leadCredentials, $options);
             }
-
+           
             unset($lead, $leadCredentials, $email, $emailModel, $factory);
 
         return $emailSent;
