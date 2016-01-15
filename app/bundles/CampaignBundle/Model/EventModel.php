@@ -710,8 +710,7 @@ class EventModel extends CommonFormModel
     ) {
         $evaluatedEventCount++;
         $totalEventCount++;
-        $otherActions = true;
-
+        
         // Get event settings if applicable
         if ($eventSettings === null) {
             /** @var \Mautic\CampaignBundle\Model\CampaignModel $campaignModel */
@@ -838,20 +837,8 @@ class EventModel extends CommonFormModel
                 return false;
             }
             
-            foreach($lead->getFields(1) as $field)
-            {
-                if($otherActions) {
-                    $otherActions = false;
-                    //trigger the action
-                    $response = $this->invokeEventCallback($event, $thisEventSettings, $lead, null, true, $log, $field['value'], true);
-                }else {
-                    if($field['type'] == 'email') {
-                        //trigger the action
-                        $response = $this->invokeEventCallback($event, $thisEventSettings, $lead, null, true, $log, $field['value'], false);
-                    }
-                }   
-            }
-            print_r($response);
+            //trigger the action
+            $response = $this->invokeEventCallback($event, $thisEventSettings, $lead, null, true, $log);
             
             if ($response instanceof LeadEventLog) {
                 // Listener handled the event and returned a log entry
@@ -1625,7 +1612,7 @@ class EventModel extends CommonFormModel
      * 
      * @return bool|mixed
      */
-    public function invokeEventCallback($event, $settings, $lead = null, $eventDetails = null, $systemTriggered = false, LeadEventLog $log = null, $email = null, $otherActions = false)
+    public function invokeEventCallback($event, $settings, $lead = null, $eventDetails = null, $systemTriggered = false, LeadEventLog $log = null)
     {
         $args = array(
             'eventSettings'   => $settings,
@@ -1634,25 +1621,24 @@ class EventModel extends CommonFormModel
             'lead'            => $lead,
             'factory'         => $this->factory,
             'systemTriggered' => $systemTriggered,
-            'config'          => $event['properties'],
-            'email'          => $email,
+            'config'          => $event['properties']
         );
         if (is_callable($settings['callback'])) {
             if (is_array($settings['callback'])) {
                 $reflection = new \ReflectionMethod($settings['callback'][0], $settings['callback'][1]);
             } elseif (strpos($settings['callback'], '::') !== false) {
-                if($otherActions)
-                {
+//                if($otherActions)
+//                {
                    $parts      = explode('::', $settings['callback']);
                    $reflection = new \ReflectionMethod($parts[0], $parts[1]);
-                }
+//                }
             } else {
                 $reflection = new \ReflectionMethod(null, $settings['callback']);
             }
 
             $pass = array();
-            if(isset($reflection))
-            {    
+//            if(isset($reflection))
+//            {    
                 foreach ($reflection->getParameters() as $param) {
                     if (isset($args[$param->getName()])) {
                         $pass[] = $args[$param->getName()];
@@ -1673,10 +1659,10 @@ class EventModel extends CommonFormModel
                         $result = $executionEvent->getLogEntry();
                     }
                 }
-            }
-            else {
-                $result = true;
-            }
+//            }
+//            else {
+//                $result = true;
+//            }
         } else {
             $result = true;
         }

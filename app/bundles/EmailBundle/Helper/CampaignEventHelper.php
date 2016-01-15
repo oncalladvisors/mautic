@@ -45,7 +45,7 @@ class CampaignEventHelper
      * @param               $email  // Modified by V-Teams (Zeeshan Ahmad)
      * @return bool|mixed
      */
-    public static function sendEmailAction(MauticFactory $factory, $lead, $event, $email)
+    public static function sendEmailAction(MauticFactory $factory, $lead, $event)
     {
         $emailSent = false;
 
@@ -59,7 +59,7 @@ class CampaignEventHelper
             $leadCredentials = $lead;
         }
         
-            $leadCredentials['email'] = $email; // Modified by V-Teams (Zeeshan Ahmad)
+            //$leadCredentials['email'] = $email; // Modified by V-Teams (Zeeshan Ahmad)
             /** @var \Mautic\EmailBundle\Model\EmailModel $emailModel */
             $emailModel = $factory->getModel('email');
 

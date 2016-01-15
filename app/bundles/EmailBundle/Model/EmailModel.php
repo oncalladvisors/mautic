@@ -920,7 +920,6 @@ class EmailModel extends FormModel
             //get email settings such as templates, weights, etc
             $emailSettings = $this->getEmailSettings($email);
         }
-
         if (!$allowResends) {
             static $sent = array();
             if (!isset($sent[$email->getId()])) {
@@ -930,24 +929,29 @@ class EmailModel extends FormModel
         } else {
             $sendTo = $leads;
         }
-
+       
         if (!$ignoreDNC) {
             //get the list of do not contacts
             static $dnc;
             if (!is_array($dnc)) {
                 $dnc = $emailRepo->getDoNotEmailList();
             }
-
+            
             //weed out do not contacts
             if (!empty($dnc)) {
                 foreach ($sendTo as $k => $lead) {
-                    if (in_array(strtolower($lead['email']), $dnc)) {
-                        unset($sendTo[$k]);
-                    }
+                    foreach($lead as $val):
+                        if(filter_var($val, FILTER_VALIDATE_EMAIL))
+                        {
+                            if (in_array(strtolower($val), $dnc)) {
+                                unset($sendTo[$k]);
+                            }
+                        }
+                    endforeach;
                 }
             }
         }
-
+        
         //get a count of leads
         $count = count($sendTo);
 
@@ -979,12 +983,13 @@ class EmailModel extends FormModel
             // Shouldn't happen but a safety catch
             $emailSettings[$backup['entity']->getId()] = $backup;
         }
-
+        
         //randomize the leads for statistic purposes
         shuffle($sendTo);
 
         //start at the beginning for this batch
         $useEmail = reset($emailSettings);
+        
         $errors   = array();
         // Store stat entities
         $saveEntities    = array();
@@ -993,7 +998,7 @@ class EmailModel extends FormModel
         $mailer = $this->factory->getMailer(!$sendBatchMail);
 
         $contentGenerated = false;
-
+        
         $flushQueue = function($reset = true) use (&$mailer, &$saveEntities, &$errors, &$emailSentCounts, $sendBatchMail) {
 
             if ($sendBatchMail) {
@@ -1027,8 +1032,10 @@ class EmailModel extends FormModel
 
             return true;
         };
-
+        
         foreach ($sendTo as $lead) {
+             
+             
             // Generate content
             if ($useEmail['entity']->getId() !== $contentGenerated) {
                 // Flush the mail queue if applicable
@@ -1045,48 +1052,56 @@ class EmailModel extends FormModel
                     $mailer->setCustomHeaders($customHeaders);
                 }
             }
+            // Modified by V-Teams (Zeeshan Ahmad)
+            foreach($lead as $val)
+            {    
+                if(filter_var($val, FILTER_VALIDATE_EMAIL))
+                {
+                    $lead['email'] = $val;
+                    $idHash = uniqid();
 
-            $idHash = uniqid();
+                    // Add tracking pixel token
+                    if (!empty($tokens)) {
+                        $mailer->setTokens($tokens);
+                    }
 
-            // Add tracking pixel token
-            if (!empty($tokens)) {
-                $mailer->setTokens($tokens);
-            }
+                    $mailer->setLead($lead);
+                    $mailer->setIdHash($idHash);
 
-            $mailer->setLead($lead);
-            $mailer->setIdHash($idHash);
+                    try {
+                        if (!$mailer->addTo($lead['email'], $lead['firstname'] . ' ' . $lead['lastname'])) {
+                            // Clear the errors so it doesn't stop the next send
+                            $mailer->clearErrors();
 
-            try {
-                if (!$mailer->addTo($lead['email'], $lead['firstname'] . ' ' . $lead['lastname'])) {
-                    // Clear the errors so it doesn't stop the next send
-                    $mailer->clearErrors();
+                            // Bad email so note and continue
+                            $errors[$lead['id']] = $lead['email'];
 
-                    // Bad email so note and continue
-                    $errors[$lead['id']] = $lead['email'];
+                            continue;
+                        }
+                    } catch (BatchQueueMaxException $e) {
+                        // Queue full so flush then try again
+                        $flushQueue(false);
 
-                    continue;
+                        $mailer->addTo($lead['email'], $lead['firstname'] . ' ' . $lead['lastname']);
+                    }
+
+                    //queue or send the message
+                    if (!$mailer->queue(true)) {
+                        $errors[$lead['id']] = $lead['email'];
+
+                        continue;
+                    }
+
+                    if (!$allowResends) {
+                        $sent[$useEmail['entity']->getId()][$lead['id']] = $lead['id'];
+                    }
+
+                    //create a stat
+                    $saveEntities[$lead['email']] = $mailer->createEmailStat(false, null, $listId);
                 }
-            } catch (BatchQueueMaxException $e) {
-                // Queue full so flush then try again
-                $flushQueue(false);
-
-                $mailer->addTo($lead['email'], $lead['firstname'] . ' ' . $lead['lastname']);
             }
-
-            //queue or send the message
-            if (!$mailer->queue(true)) {
-                $errors[$lead['id']] = $lead['email'];
-
-                continue;
-            }
-
-            if (!$allowResends) {
-                $sent[$useEmail['entity']->getId()][$lead['id']] = $lead['id'];
-            }
-
-            //create a stat
-            $saveEntities[$lead['email']] = $mailer->createEmailStat(false, null, $listId);
-
+            // Ends Here.......
+            
             // Up sent counts
             $emailId = $useEmail['entity']->getId();
             if (!isset($emailSentCounts[$emailId])) {
@@ -1102,14 +1117,14 @@ class EmailModel extends FormModel
                 $batchCount = 0;
                 $useEmail   = next($emailSettings);
             }
+             
         }
 
         // Send batched mail if applicable
         $flushQueue();
-
+        
         // Persist stats
         $statRepo->saveEntities($saveEntities);
-
         // Update sent counts
         foreach($emailSentCounts as $emailId => $count) {
             $isVariant = $emailSettings[$emailId]['entity']->getVariantStartDate();
