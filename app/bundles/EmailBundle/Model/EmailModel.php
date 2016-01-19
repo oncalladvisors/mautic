@@ -952,7 +952,7 @@ class EmailModel extends FormModel
                 }
             }
         }
-        
+
         //get a count of leads
         $count = count($sendTo);
 
@@ -990,7 +990,6 @@ class EmailModel extends FormModel
 
         //start at the beginning for this batch
         $useEmail = reset($emailSettings);
-        
         $errors   = array();
         // Store stat entities
         $saveEntities    = array();
