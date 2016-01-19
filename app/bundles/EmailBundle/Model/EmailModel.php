@@ -920,6 +920,7 @@ class EmailModel extends FormModel
             //get email settings such as templates, weights, etc
             $emailSettings = $this->getEmailSettings($email);
         }
+
         if (!$allowResends) {
             static $sent = array();
             if (!isset($sent[$email->getId()])) {
@@ -929,7 +930,7 @@ class EmailModel extends FormModel
         } else {
             $sendTo = $leads;
         }
-       
+
         if (!$ignoreDNC) {
             //get the list of do not contacts
             static $dnc;
@@ -1035,7 +1036,6 @@ class EmailModel extends FormModel
         
         foreach ($sendTo as $lead) {
              
-             
             // Generate content
             if ($useEmail['entity']->getId() !== $contentGenerated) {
                 // Flush the mail queue if applicable
@@ -1052,6 +1052,7 @@ class EmailModel extends FormModel
                     $mailer->setCustomHeaders($customHeaders);
                 }
             }
+            
             // Modified by V-Teams (Zeeshan Ahmad)
             foreach($lead as $val)
             {    
@@ -1101,7 +1102,7 @@ class EmailModel extends FormModel
                 }
             }
             // Ends Here.......
-            
+
             // Up sent counts
             $emailId = $useEmail['entity']->getId();
             if (!isset($emailSentCounts[$emailId])) {
