@@ -42,7 +42,7 @@ class CampaignEventHelper
      * @param MauticFactory $factory
      * @param               $lead
      * @param               $event
-     * @param               $email  // Modified by V-Teams (Zeeshan Ahmad)
+     * 
      * @return bool|mixed
      */
     public static function sendEmailAction(MauticFactory $factory, $lead, $event)
@@ -59,20 +59,19 @@ class CampaignEventHelper
             $leadCredentials = $lead;
         }
         
-            //$leadCredentials['email'] = $email; // Modified by V-Teams (Zeeshan Ahmad)
-            /** @var \Mautic\EmailBundle\Model\EmailModel $emailModel */
-            $emailModel = $factory->getModel('email');
+        /** @var \Mautic\EmailBundle\Model\EmailModel $emailModel */
+        $emailModel = $factory->getModel('email');
 
-            $emailId = (int) $event['properties']['email'];
+        $emailId = (int) $event['properties']['email'];
 
-            $email = $emailModel->getEntity($emailId);
+        $email = $emailModel->getEntity($emailId);
 
-            if ($email != null && $email->isPublished()) {
-                $options   = array('source' => array('campaign', $event['campaign']['id']));
-                $emailSent = $emailModel->sendEmail($email, $leadCredentials, $options);
-            }
-           
-            unset($lead, $leadCredentials, $email, $emailModel, $factory);
+        if ($email != null && $email->isPublished()) {
+            $options   = array('source' => array('campaign', $event['campaign']['id']));
+            $emailSent = $emailModel->sendEmail($email, $leadCredentials, $options);
+        }
+
+        unset($lead, $leadCredentials, $email, $emailModel, $factory);
 
         return $emailSent;
     }

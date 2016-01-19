@@ -71,11 +71,6 @@ class LeadEventLog
     private $nonActionPathTaken = false;
     
     /**
-     * @var string
-     */
-    private $email = null;
-    
-    /**
      * @param ORM\ClassMetadata $metadata
      */
     public static function loadMetadata (ORM\ClassMetadata $metadata)
@@ -117,12 +112,6 @@ class LeadEventLog
         $builder->createField('systemTriggered', 'boolean')
             ->columnName('system_triggered')
             ->build();
-        
-         // Modified by V-Teams (Zeeshan Ahmad)
-//        $builder->createField('email', 'string')
-//            ->columnName('email')
-//            ->isPrimaryKey()
-//            ->build();
         
         $builder->createField('metadata', 'array')
             ->nullable()
@@ -273,23 +262,6 @@ class LeadEventLog
     public function setNonActionPathTaken($nonActionPathTaken)
     {
         $this->nonActionPathTaken = $nonActionPathTaken;
-    }
-    
-    // Modified by V-Teams (Zeeshan Ahmad)
-    /**
-     * @return string
-     */
-    public function getEmail ()
-    {
-        return $this->email;
-    }
-
-    /**
-     * @param string $email
-     */
-    public function setEmail ($email)
-    {
-       $this->email = $email;
     }
     
     /**
