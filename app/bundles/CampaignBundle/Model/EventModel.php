@@ -697,7 +697,6 @@ class EventModel extends CommonFormModel
     ) {
         $evaluatedEventCount++;
         $totalEventCount++;
-        
         // Get event settings if applicable
         if ($eventSettings === null) {
             /** @var \Mautic\CampaignBundle\Model\CampaignModel $campaignModel */
@@ -770,7 +769,6 @@ class EventModel extends CommonFormModel
 
         if ($eventTriggerDate instanceof \DateTime) {
             $executedEventCount++;
-             
             //lead actively triggered this event, a decision wasn't involved, or it was system triggered and a "no" path so schedule the event to be fired at the defined time
             $logger->debug(
                 'CAMPAIGN: '.ucfirst($event['eventType']).' ID# '.$event['id'].' for lead ID# '.$lead->getId()
@@ -1122,29 +1120,21 @@ class EventModel extends CommonFormModel
                         'id'   => $campaignId,
                         'name' => $campaignName
                     );
-                    // Modified by V-Teams (Zeeshan Ahmad)
-                    foreach($lead->getFields(1) as $field)    {
-                        if($field['type'] == 'email' && trim($field['value']) != "")
-                        {    
-                            // Execute event
-                            if ($this->executeEvent(
-                                $event,
-                                $campaign,
-                                $lead,
-                                $eventSettings,
-                                false,
-                                null,
-                                true,
-                                true,
-                                $evaluatedEventCount,
-                                $executedEventCount,
-                                $totalEventCount,
-                                $field['value']
-                            )) {
-                                $scheduledExecutedCount++;
-                            }
-                    
-                        }   
+                    // Execute event
+                    if ($this->executeEvent(
+                        $event,
+                        $campaign,
+                        $lead,
+                        $eventSettings,
+                        false,
+                        null,
+                        true,
+                        true,
+                        $evaluatedEventCount,
+                        $executedEventCount,
+                        $totalEventCount
+                    )) {
+                        $scheduledExecutedCount++;
                     }
 
                     if ($max && $totalEventCount >= $max) {
@@ -1491,10 +1481,7 @@ class EventModel extends CommonFormModel
                                 // Set lead in case this is triggered by the system
                                 $leadModel->setSystemCurrentLead($lead);
 
-                                // Modified by V-Teams (Zeeshan Ahmad)
-                                foreach($lead->getFields(1) as $field)    {
-                                    if($field['type'] == 'email' && trim($field['value']) != "")
-                                    {
+                                
                                         if ($this->executeEvent(
                                             $event,
                                             $campaign,
@@ -1524,8 +1511,7 @@ class EventModel extends CommonFormModel
                                             $negativeExecutedCount++;
                                         }
                                         unset($utcDateString, $grandParentDate);
-                                    }
-                                }
+                                    
                             }
                         } else {
                             $logger->debug('CAMPAIGN: Decision has already been executed.');
@@ -1612,18 +1598,13 @@ class EventModel extends CommonFormModel
             if (is_array($settings['callback'])) {
                 $reflection = new \ReflectionMethod($settings['callback'][0], $settings['callback'][1]);
             } elseif (strpos($settings['callback'], '::') !== false) {
-//                if($otherActions)
-//                {
                    $parts      = explode('::', $settings['callback']);
                    $reflection = new \ReflectionMethod($parts[0], $parts[1]);
-//                }
             } else {
                 $reflection = new \ReflectionMethod(null, $settings['callback']);
             }
 
             $pass = array();
-//            if(isset($reflection))
-//            {    
                 foreach ($reflection->getParameters() as $param) {
                     if (isset($args[$param->getName()])) {
                         $pass[] = $args[$param->getName()];
@@ -1644,10 +1625,6 @@ class EventModel extends CommonFormModel
                         $result = $executionEvent->getLogEntry();
                     }
                 }
-//            }
-//            else {
-//                $result = true;
-//            }
         } else {
             $result = true;
         }
