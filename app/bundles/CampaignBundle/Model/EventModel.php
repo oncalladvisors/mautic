@@ -576,62 +576,49 @@ class EventModel extends CommonFormModel
                             // Decision has already been triggered by the lead so process the associated events
                             $decisionLogged = false;
                             foreach ($decisionEvent['children'] as $childEvent) {
-                                // Modified by V-Teams (Zeeshan Ahmad)
-//                                foreach($lead->getFields(1) as $field)    {
-//                                    if($field['type'] == 'email' && trim($field['value']) != "")
-//                                    {
-                                        if ($this->executeEvent(
-                                                $childEvent,
-                                                $campaign,
-                                                $lead,
-                                                $eventSettings,
-                                                false,
-                                                null,
-                                                null,
-                                                $evaluatedEventCount,
-                                                $executedEventCount,
-                                                $totalEventCount
-                                            )
-                                            && !$decisionLogged
-                                        ) {
-                                            // Log the decision
-                                            $log = $this->getLogEntity($decisionEvent['id'], $campaign, $lead, null, true);
-                                            $log->setDateTriggered(new \DateTime());
-                                            $log->setNonActionPathTaken(true);
-                                            $repo->saveEntity($log);
-                                            $this->em->detach($log);
-                                            unset($log);
-                                            $decisionLogged = true;
-                                        }
-//                                    }
-//                                
-//                                }
+                                if ($this->executeEvent(
+                                        $childEvent,
+                                        $campaign,
+                                        $lead,
+                                        $eventSettings,
+                                        false,
+                                        null,
+                                        null,
+                                        $evaluatedEventCount,
+                                        $executedEventCount,
+                                        $totalEventCount
+                                    )
+                                    && !$decisionLogged
+                                ) {
+                                    // Log the decision
+                                    $log = $this->getLogEntity($decisionEvent['id'], $campaign, $lead, null, true);
+                                    $log->setDateTriggered(new \DateTime());
+                                    $log->setNonActionPathTaken(true);
+                                    $repo->saveEntity($log);
+                                    $this->em->detach($log);
+                                    unset($log);
+                                    $decisionLogged = true;
+                                }
                             }
                         }
 
                         unset($decisionEvent);
                     } else {
-                        // Modified by V-Teams (Zeeshan Ahmad)
-//                        foreach($lead->getFields(1) as $field)    {
-//                            if($field['type'] == 'email' && trim($field['value']) != "")
-//                            {
-                                if ($this->executeEvent(
-                                    $event,
-                                    $campaign,
-                                    $lead,
-                                    $eventSettings,
-                                    false,
-                                    null,
-                                    null,
-                                    false,
-                                    $evaluatedEventCount,
-                                    $executedEventCount,
-                                    $totalEventCount
-                                )) {
-                                    $rootExecutedCount++;
-                                }
-//                            }
-//                        }
+                        if ($this->executeEvent(
+                            $event,
+                            $campaign,
+                            $lead,
+                            $eventSettings,
+                            false,
+                            null,
+                            null,
+                            false,
+                            $evaluatedEventCount,
+                            $executedEventCount,
+                            $totalEventCount
+                        )) {
+                            $rootExecutedCount++;
+                        }
                     }
 
                     unset($event);
@@ -836,10 +823,8 @@ class EventModel extends CommonFormModel
 
                 return false;
             }
-            
             //trigger the action
             $response = $this->invokeEventCallback($event, $thisEventSettings, $lead, null, true, $log);
-            
             if ($response instanceof LeadEventLog) {
                 // Listener handled the event and returned a log entry
                 $repo->saveEntity($response);
