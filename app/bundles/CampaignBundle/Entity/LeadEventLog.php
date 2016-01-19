@@ -69,7 +69,7 @@ class LeadEventLog
      * @var bool
      */
     private $nonActionPathTaken = false;
-    
+
     /**
      * @param ORM\ClassMetadata $metadata
      */
@@ -112,7 +112,7 @@ class LeadEventLog
         $builder->createField('systemTriggered', 'boolean')
             ->columnName('system_triggered')
             ->build();
-        
+
         $builder->createField('metadata', 'array')
             ->nullable()
             ->build();
@@ -263,7 +263,7 @@ class LeadEventLog
     {
         $this->nonActionPathTaken = $nonActionPathTaken;
     }
-    
+
     /**
      * @return mixed
      */

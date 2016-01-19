@@ -42,7 +42,7 @@ class CampaignEventHelper
      * @param MauticFactory $factory
      * @param               $lead
      * @param               $event
-     * 
+     *
      * @return bool|mixed
      */
     public static function sendEmailAction(MauticFactory $factory, $lead, $event)
@@ -51,6 +51,7 @@ class CampaignEventHelper
 
         if ($lead instanceof Lead) {
             $fields = $lead->getFields();
+
             /** @var \Mautic\LeadBundle\Model\LeadModel $leadModel */
             $leadModel             = $factory->getModel('lead');
             $leadCredentials       = $leadModel->flattenFields($fields);
@@ -58,17 +59,19 @@ class CampaignEventHelper
         } else {
             $leadCredentials = $lead;
         }
-        
-        /** @var \Mautic\EmailBundle\Model\EmailModel $emailModel */
-        $emailModel = $factory->getModel('email');
 
-        $emailId = (int) $event['properties']['email'];
+        if (!empty($leadCredentials['email'])) {
+            /** @var \Mautic\EmailBundle\Model\EmailModel $emailModel */
+            $emailModel = $factory->getModel('email');
 
-        $email = $emailModel->getEntity($emailId);
+            $emailId = (int) $event['properties']['email'];
 
-        if ($email != null && $email->isPublished()) {
-            $options   = array('source' => array('campaign', $event['campaign']['id']));
-            $emailSent = $emailModel->sendEmail($email, $leadCredentials, $options);
+            $email = $emailModel->getEntity($emailId);
+
+            if ($email != null && $email->isPublished()) {
+                $options   = array('source' => array('campaign', $event['campaign']['id']));
+                $emailSent = $emailModel->sendEmail($email, $leadCredentials, $options);
+            }
         }
 
         unset($lead, $leadCredentials, $email, $emailModel, $factory);
