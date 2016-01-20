@@ -952,6 +952,7 @@ class EmailModel extends FormModel
                 }
             }
         }
+
         //get a count of leads
         $count = count($sendTo);
 
